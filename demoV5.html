@@ -1,0 +1,1623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>POLY FORGE V5 · Low-Poly Asset Designer</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #040810;
+      --bg2: #070d18;
+      --border: #1a2a44;
+      --cyan: #00ffff;
+      --blue: #4488ff;
+      --purple: #aa44ff;
+      --gold: #ffcc00;
+      --green: #44ff88;
+      --red: #ff3366;
+      --text: #c8d8ff;
+      --muted: #3a5a7e;
+      --mono: 'Share Tech Mono', 'Courier New', monospace;
+    }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--mono);
+      overflow: hidden;
+    }
+
+    #root {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ── Boot splash ──────────────────────────────────────────────── */
+    #boot {
+      position: fixed; inset: 0; z-index: 9999;
+      background: #020508;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      transition: opacity 0.6s ease;
+    }
+    #boot.fade { opacity: 0; pointer-events: none; }
+
+    .boot-logo {
+      font-size: 42px; letter-spacing: 8px; font-weight: bold;
+      background: linear-gradient(135deg, #00ffff 0%, #4488ff 50%, #aa44ff 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      margin-bottom: 10px;
+    }
+    .boot-sub {
+      font-size: 12px; letter-spacing: 4px; color: var(--muted); margin-bottom: 40px;
+    }
+    .boot-bar {
+      width: 280px; height: 3px; background: #0a1020; border-radius: 2px; overflow: hidden;
+    }
+    .boot-fill {
+      height: 100%; width: 0;
+      background: linear-gradient(90deg, #00ffff, #4488ff, #aa44ff);
+      border-radius: 2px;
+      animation: bootLoad 1.4s ease-in-out forwards;
+    }
+    @keyframes bootLoad {
+      0%   { width: 0; }
+      40%  { width: 55%; }
+      70%  { width: 78%; }
+      100% { width: 100%; }
+    }
+    .boot-status {
+      margin-top: 14px; font-size: 10px; color: var(--muted); letter-spacing: 2px;
+      min-height: 18px;
+    }
+
+    /* ── App shell ────────────────────────────────────────────────── */
+    #app {
+      display: flex; flex-direction: column; height: 100%;
+      opacity: 0; transition: opacity 0.4s ease;
+    }
+    #app.visible { opacity: 1; }
+
+    /* ── Header ───────────────────────────────────────────────────── */
+    .header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 20px; flex-shrink: 0;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(4,8,16,0.98) 0%, transparent 100%);
+      gap: 16px; position: relative; z-index: 10;
+    }
+
+    .logo {
+      font-size: 18px; font-weight: bold; letter-spacing: 4px;
+      background: linear-gradient(135deg, #00ffff 0%, #4488ff 50%, #aa44ff 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      white-space: nowrap;
+    }
+
+    .tab-bar {
+      display: flex; gap: 3px;
+      background: rgba(0,0,0,0.4); border-radius: 7px; padding: 3px;
+    }
+    .tab-btn {
+      padding: 5px 16px; border-radius: 5px; cursor: pointer;
+      font-size: 10px; letter-spacing: 2px; border: none;
+      background: transparent; color: var(--muted);
+      font-family: var(--mono); transition: all 0.15s;
+    }
+    .tab-btn.active {
+      background: rgba(68,136,255,0.2); color: var(--cyan);
+      box-shadow: 0 0 10px rgba(0,200,255,0.25);
+    }
+    .tab-btn:hover:not(.active) { color: var(--text); background: rgba(255,255,255,0.04); }
+
+    .stats {
+      display: flex; gap: 18px; font-size: 11px; color: var(--muted); white-space: nowrap;
+    }
+    .stat-val { color: var(--cyan); }
+
+    /* ── Main layout ──────────────────────────────────────────────── */
+    .main {
+      flex: 1; display: flex; overflow: hidden; position: relative;
+    }
+
+    /* ── Side panels ──────────────────────────────────────────────── */
+    .panel {
+      background: rgba(7,13,24,0.97); border: 1px solid var(--border);
+      border-radius: 8px; padding: 11px; margin: 6px;
+      backdrop-filter: blur(8px);
+    }
+    .panel-title {
+      font-size: 9px; color: var(--muted); margin-bottom: 8px;
+      text-transform: uppercase; letter-spacing: 2px;
+    }
+
+    .left-panel {
+      width: 190px; flex-shrink: 0; overflow-y: auto; display: flex; flex-direction: column;
+    }
+    .right-panel {
+      width: 155px; flex-shrink: 0; overflow-y: auto;
+    }
+
+    /* ── Viewport ─────────────────────────────────────────────────── */
+    .viewport {
+      flex: 1; position: relative; overflow: hidden;
+    }
+
+    #canvas-mount {
+      width: 100%; height: 100%;
+    }
+
+    /* ── Part items ───────────────────────────────────────────────── */
+    .part-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 7px 9px; margin-bottom: 3px;
+      background: #050d18; border: 1px solid transparent;
+      border-radius: 4px; cursor: pointer; font-size: 10px;
+      transition: all 0.12s;
+    }
+    .part-item:hover { background: #0a1828; border-color: #1a2a44; }
+    .part-item.selected {
+      background: rgba(68,136,255,0.12); border-color: #4488ff;
+      box-shadow: 0 0 8px rgba(68,136,255,0.2);
+    }
+    .del-btn {
+      background: none; border: none; color: var(--red); cursor: pointer;
+      font-size: 16px; line-height: 1; padding: 0; opacity: 0.7; transition: opacity 0.1s;
+    }
+    .del-btn:hover { opacity: 1; }
+
+    /* ── Component buttons ────────────────────────────────────────── */
+    .comp-btn {
+      width: 100%; margin-bottom: 5px; display: flex;
+      flex-direction: column; align-items: center; padding: 10px 6px;
+      background: #050d18; border: 1px solid var(--border); border-radius: 5px;
+      color: var(--text); cursor: pointer; font-family: var(--mono);
+      transition: all 0.15s;
+    }
+    .comp-btn:hover { background: #0a1828; border-color: #2a3a54; transform: translateY(-1px); }
+    .comp-btn:active { transform: translateY(0); }
+    .comp-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+    .comp-icon { font-size: 20px; }
+    .comp-label { font-size: 8px; margin-top: 4px; letter-spacing: 1px; color: var(--muted); }
+
+    /* ── Socket items ─────────────────────────────────────────────── */
+    .socket-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 6px 8px; margin-bottom: 3px;
+      background: #040c18; border: 1px solid transparent;
+      border-radius: 4px; cursor: pointer; font-size: 10px;
+      transition: all 0.12s;
+    }
+    .socket-item:hover { border-color: #1a2a44; }
+
+    /* ── Anim state items ─────────────────────────────────────────── */
+    .anim-state {
+      padding: 8px 10px; margin-bottom: 4px;
+      background: #05101e; border: 1px solid var(--border);
+      border-radius: 5px; cursor: pointer; font-size: 10px;
+      transition: all 0.12s;
+    }
+    .anim-state:hover { border-color: #2a3a54; }
+    .anim-state.preview { border-color: var(--purple); background: #1a0a2e; }
+
+    /* ── Color palette ────────────────────────────────────────────── */
+    .palette-grid {
+      display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; margin-bottom: 10px;
+    }
+    .swatch {
+      width: 22px; height: 22px; border-radius: 3px; cursor: pointer;
+      border: 2px solid transparent; transition: all 0.12s;
+    }
+    .swatch.active {
+      border-color: var(--gold); box-shadow: 0 0 8px var(--gold);
+    }
+
+    /* ── Transform bar ────────────────────────────────────────────── */
+    .transform-bar {
+      display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+      padding: 10px 18px; border-top: 1px solid var(--border);
+      background: rgba(7,13,24,0.95); flex-shrink: 0;
+    }
+    .t-group { display: flex; align-items: center; gap: 6px; }
+    .t-label { font-size: 8px; color: var(--muted); letter-spacing: 1px; min-width: 48px; }
+    .ax { font-size: 9px; width: 10px; }
+    .ax-x { color: var(--red); }
+    .ax-y { color: #44ff88; }
+    .ax-z { color: var(--blue); }
+    .t-val { font-size: 8px; color: var(--muted); min-width: 28px; }
+    input[type=range] { accent-color: var(--blue); cursor: pointer; }
+    input[type=checkbox] { accent-color: var(--blue); }
+
+    /* ── Buttons ──────────────────────────────────────────────────── */
+    .btn {
+      padding: 7px 11px; background: #050d18; border: 1px solid var(--border);
+      border-radius: 4px; color: var(--text); cursor: pointer;
+      font-family: var(--mono); font-size: 10px; transition: all 0.15s; letter-spacing: 1px;
+    }
+    .btn:hover { background: #0a1828; border-color: #2a3a54; }
+    .btn-primary { background: linear-gradient(135deg, #2266dd, #1144bb); border-color: var(--blue); }
+    .btn-success { background: linear-gradient(135deg, #22aa66, #117744); border-color: var(--green); color: #ccffdd; }
+    .btn-danger  { background: linear-gradient(135deg, #881122, #551122); border-color: var(--red); color: #ffaabb; }
+    .btn-accent  { background: linear-gradient(135deg, #5522cc, #3311aa); border-color: var(--purple); color: #ddccff; }
+    .btn-sm { padding: 3px 8px; font-size: 9px; }
+    .btn-xs { padding: 2px 6px; font-size: 8px; }
+    .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    /* ── Inputs ───────────────────────────────────────────────────── */
+    .input {
+      width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border);
+      border-radius: 4px; padding: 5px 8px; color: var(--text); font-size: 10px;
+      font-family: var(--mono); outline: none; box-sizing: border-box;
+    }
+    .input:focus { border-color: #2a4a7a; }
+    select.input { appearance: none; }
+
+    /* ── Group toggle ─────────────────────────────────────────────── */
+    .group-toggle {
+      display: flex; gap: 3px; margin-bottom: 8px;
+    }
+    .group-btn {
+      flex: 1; padding: 4px 4px; font-size: 9px; text-transform: uppercase;
+      letter-spacing: 1px; cursor: pointer; background: #050d18;
+      border: 1px solid var(--border); border-radius: 4px; color: var(--muted);
+      font-family: var(--mono); transition: all 0.15s;
+    }
+    .group-btn.active { background: linear-gradient(135deg, #2266dd, #1144bb); border-color: var(--blue); color: var(--text); }
+
+    /* ── HUD overlays ─────────────────────────────────────────────── */
+    .hud-controls {
+      position: absolute; top: 14px; right: 14px;
+      background: rgba(7,13,24,0.9); border: 1px solid var(--border);
+      border-radius: 7px; padding: 10px; font-size: 9px; backdrop-filter: blur(6px);
+    }
+    .hud-controls-title { color: var(--cyan); margin-bottom: 5px; letter-spacing: 1px; }
+    .hud-controls-body { color: var(--muted); line-height: 1.8; }
+
+    .palette-panel {
+      position: absolute; bottom: 16px; left: 16px;
+      background: rgba(7,13,24,0.92); border: 1px solid var(--border);
+      border-radius: 7px; padding: 10px; backdrop-filter: blur(6px);
+    }
+
+    .anim-indicator {
+      position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+      background: rgba(170,68,255,0.18); border: 1px solid var(--purple);
+      border-radius: 20px; padding: 4px 16px; font-size: 10px;
+      color: #cc88ff; letter-spacing: 2px; pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    .empty-hint {
+      position: absolute; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; pointer-events: none;
+    }
+    .empty-icon { font-size: 56px; opacity: 0.1; }
+    .empty-text { font-size: 11px; color: #1a3a5a; letter-spacing: 3px; margin-top: 6px; }
+
+    /* ── Modal ────────────────────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.88);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1000; backdrop-filter: blur(6px);
+    }
+    .modal-box {
+      background: #070d18; border: 1px solid var(--border); border-radius: 12px;
+      padding: 22px; min-width: 440px; max-width: 540px;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.7), 0 0 40px rgba(68,136,255,0.12);
+    }
+    .modal-header {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;
+    }
+    .modal-title { font-size: 14px; color: var(--cyan); letter-spacing: 2px; }
+    .export-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+    }
+    .export-card {
+      background: rgba(10,20,36,0.8); border: 1px solid var(--border); border-radius: 7px;
+      padding: 12px; text-align: center; cursor: pointer; transition: all 0.15s;
+    }
+    .export-card:hover { border-color: #2a4a7a; background: rgba(20,40,72,0.8); }
+    .export-card:disabled, .export-card.disabled { opacity: 0.35; cursor: not-allowed; }
+    .export-icon { font-size: 24px; margin-bottom: 5px; }
+    .export-label { font-size: 11px; font-weight: bold; color: #c8d8ff; }
+    .export-desc { font-size: 8px; color: var(--muted); margin-top: 2px; }
+    .drop-zone {
+      border: 2px dashed var(--border); border-radius: 8px; padding: 28px;
+      text-align: center; cursor: pointer; transition: all 0.15s;
+    }
+    .drop-zone:hover, .drop-zone.drag { border-color: var(--cyan); background: rgba(0,255,255,0.04); }
+    .drop-icon { font-size: 32px; margin-bottom: 8px; }
+    .drop-text { font-size: 11px; color: #7a9aaa; }
+    .drop-sub { font-size: 9px; color: var(--muted); margin-top: 3px; }
+
+    /* ── Quick socket strip ───────────────────────────────────────── */
+    .qs-btn {
+      display: block; width: 100%; margin-bottom: 4px;
+      padding: 5px 6px; background: #050d18; border: 1px solid var(--border);
+      border-radius: 4px; color: var(--text); font-family: var(--mono);
+      font-size: 9px; cursor: pointer; text-align: left; transition: all 0.12s;
+    }
+    .qs-btn:hover { background: #0a1828; border-color: #2a3a54; }
+
+    /* ── Footer ───────────────────────────────────────────────────── */
+    .footer {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 20px; border-top: 1px solid var(--border);
+      background: rgba(4,8,16,0.98); flex-shrink: 0;
+    }
+    .footer-info { font-size: 9px; color: #1a3a5a; }
+
+    /* ── Add form ─────────────────────────────────────────────────── */
+    .add-form {
+      margin-top: 8px; padding: 9px; background: #040c18;
+      border-radius: 5px; border: 1px solid var(--border);
+    }
+    .form-row { display: flex; gap: 5px; margin-top: 6px; }
+
+    /* ── Scrollbar ────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #1a2a44; border-radius: 2px; }
+    ::-webkit-scrollbar-thumb:hover { background: #2a3a54; }
+
+    /* ── Animations ───────────────────────────────────────────────── */
+    @keyframes pulse { 0%,100%{opacity:0.6} 50%{opacity:1} }
+    .pulse { animation: pulse 2s ease-in-out infinite; }
+
+    /* ── Tab content visibility ───────────────────────────────────── */
+    .tab-content { display: none; height: 100%; flex-direction: column; }
+    .tab-content.active { display: flex; }
+  </style>
+</head>
+<body>
+
+<!-- Boot splash -->
+<div id="boot">
+  <div class="boot-logo">POLY FORGE</div>
+  <div class="boot-sub">LOW-POLY ASSET DESIGNER V5</div>
+  <div class="boot-bar"><div class="boot-fill"></div></div>
+  <div class="boot-status" id="boot-status">Initializing Three.js renderer…</div>
+</div>
+
+<div id="app">
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">POLY FORGE V5</div>
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="MESH" onclick="switchTab('MESH')">MESH</button>
+      <button class="tab-btn" data-tab="SOCKETS" onclick="switchTab('SOCKETS')">SOCKETS</button>
+      <button class="tab-btn" data-tab="ANIMATE" onclick="switchTab('ANIMATE')">ANIMATE</button>
+    </div>
+    <div class="stats">
+      <span>PARTS <span class="stat-val" id="stat-parts">0</span>/<span class="stat-val">32</span></span>
+      <span>POLY <span class="stat-val" id="stat-poly">0</span></span>
+      <span>SOCKETS <span class="stat-val" id="stat-sockets">0</span></span>
+      <span>STATES <span class="stat-val" id="stat-states">0</span></span>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+
+    <!-- LEFT PANEL -->
+    <div class="panel left-panel" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- MESH TAB -->
+      <div class="tab-content active" id="tab-MESH" style="flex-direction:column;flex:1;overflow:hidden;">
+        <div class="panel-title">Ship Parts</div>
+        <div id="parts-list" style="flex:1;overflow-y:auto;">
+          <div id="no-parts" style="color:#1a3a5a;font-size:10px;text-align:center;padding:20px;">
+            Add components →
+          </div>
+        </div>
+      </div>
+
+      <!-- SOCKETS TAB -->
+      <div class="tab-content" id="tab-SOCKETS" style="flex-direction:column;flex:1;overflow:hidden;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0;">
+          <div class="panel-title" style="margin-bottom:0;">SOCKETS <span id="socket-count">0</span></div>
+          <button class="btn btn-sm" onclick="openAddSocket()">+</button>
+        </div>
+        <div id="add-socket-form" class="add-form" style="display:none;">
+          <input class="input" id="socket-name-input" placeholder="Socket name…" style="margin-bottom:5px;" />
+          <select class="input" id="socket-type-select" style="margin-bottom:6px;">
+            <option value="weapon">⚡ Weapon</option>
+            <option value="engine">🔥 Engine</option>
+            <option value="thruster">💨 Thruster</option>
+            <option value="shield">🛡 Shield</option>
+            <option value="fx">✨ FX</option>
+            <option value="custom">📌 Custom</option>
+          </select>
+          <div class="form-row">
+            <button class="btn btn-primary" style="flex:1;font-size:9px;" onclick="confirmAddSocket()">Create</button>
+            <button class="btn" style="flex:1;font-size:9px;" onclick="closeAddSocket()">Cancel</button>
+          </div>
+        </div>
+        <div id="socket-list" style="flex:1;overflow-y:auto;margin-top:8px;">
+          <div id="no-sockets" style="color:#1a3a5a;font-size:10px;text-align:center;padding:20px;">No sockets yet</div>
+        </div>
+        <div id="socket-inspector" style="display:none;border-top:1px solid var(--border);padding-top:8px;margin-top:4px;">
+          <div class="panel-title">INSPECTOR</div>
+          <input class="input" id="si-name" style="margin-bottom:5px;" />
+          <select class="input" id="si-type" style="margin-bottom:6px;">
+            <option value="weapon">⚡ Weapon</option>
+            <option value="engine">🔥 Engine</option>
+            <option value="thruster">💨 Thruster</option>
+            <option value="shield">🛡 Shield</option>
+            <option value="fx">✨ FX</option>
+            <option value="custom">📌 Custom</option>
+          </select>
+          <div style="font-size:9px;color:var(--muted);margin-bottom:4px;">POSITION</div>
+          <div id="si-pos-controls"></div>
+          <label style="display:flex;align-items:center;gap:6px;font-size:9px;color:var(--muted);cursor:pointer;margin-top:5px;">
+            <input type="checkbox" id="si-mirror" /> X-axis mirror
+          </label>
+        </div>
+      </div>
+
+      <!-- ANIMATE TAB -->
+      <div class="tab-content" id="tab-ANIMATE" style="flex-direction:column;flex:1;overflow:hidden;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0;">
+          <div class="panel-title" style="margin-bottom:0;">ANIM STATES <span id="anim-count">0</span>/8</div>
+          <button class="btn btn-sm" onclick="openAddAnim()">+</button>
+        </div>
+        <div id="add-anim-form" class="add-form" style="display:none;">
+          <input class="input" id="anim-name-input" placeholder="State name (e.g. wings-folded)" style="margin-bottom:5px;" />
+          <input class="input" id="anim-desc-input" placeholder="Description (optional)" style="margin-bottom:6px;" />
+          <div class="form-row">
+            <button class="btn btn-primary" style="flex:1;font-size:9px;" onclick="confirmAddAnim()">Create + Capture</button>
+            <button class="btn" style="flex:1;font-size:9px;" onclick="closeAddAnim()">Cancel</button>
+          </div>
+        </div>
+        <div id="anim-list" style="flex:1;overflow-y:auto;margin-top:8px;">
+          <div id="no-anims" style="color:#1a3a5a;font-size:10px;text-align:center;padding:16px;line-height:1.7;">
+            No animation states yet.<br>
+            <span style="color:#2a4a6a;">Create states to define keyframe positions.</span>
+          </div>
+        </div>
+        <div id="anim-inspector" style="display:none;border-top:1px solid var(--border);padding-top:8px;margin-top:4px;">
+          <div class="panel-title" id="ai-title">STATE: –</div>
+          <div id="ai-info" style="font-size:9px;color:var(--muted);margin-bottom:6px;"></div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;">
+            <button class="btn btn-primary" style="flex:1;font-size:9px;" onclick="recaptureSelectedAnim()">↻ Recapture</button>
+            <button class="btn" style="font-size:9px;" onclick="exportSelectedAnim()">↓ JSON</button>
+          </div>
+        </div>
+        <div style="font-size:9px;color:#1a3a5a;margin-top:8px;line-height:1.5;">
+          States capture part transforms. Interpolation drives in-game animation.
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEWPORT -->
+    <div class="viewport">
+      <div id="canvas-mount" style="width:100%;height:100%;"></div>
+
+      <div class="empty-hint" id="empty-hint">
+        <div class="empty-icon">✦</div>
+        <div class="empty-text">ADD COMPONENTS TO BEGIN</div>
+      </div>
+
+      <div class="anim-indicator" id="anim-indicator" style="display:none;">
+        ANIM PREVIEW · <span id="anim-pct">0</span>%
+      </div>
+
+      <!-- Palette panel -->
+      <div class="palette-panel">
+        <div class="panel-title">PAINT</div>
+        <div class="palette-grid" id="palette-grid"></div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;">
+          <button class="btn btn-sm" id="undo-btn" onclick="doUndo()" style="opacity:0.4;">↩ Undo</button>
+          <button class="btn btn-sm" onclick="doClear()">Clear</button>
+          <button class="btn btn-sm" id="sockets-toggle" onclick="toggleSocketVis()" style="font-size:9px;">⊕ Sockets</button>
+          <button class="btn btn-sm btn-primary" onclick="openModal()">File</button>
+        </div>
+      </div>
+
+      <!-- Controls hint -->
+      <div class="hud-controls">
+        <div class="hud-controls-title">CONTROLS</div>
+        <div class="hud-controls-body">
+          › Drag — orbit<br>
+          › Scroll — zoom<br>
+          › Click — select<br>
+          › Click face — paint
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="panel right-panel">
+      <div class="group-toggle">
+        <button class="group-btn active" id="grp-ship" onclick="setGroup('ship')">Ship</button>
+        <button class="group-btn" id="grp-mecha" onclick="setGroup('mecha')">Mecha</button>
+      </div>
+      <div class="panel-title" id="comp-title">Ship Parts</div>
+      <div id="comp-buttons"></div>
+
+      <div style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px;">
+        <div class="panel-title">Quick Socket</div>
+        <div id="quick-sockets"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Transform bar -->
+  <div class="transform-bar" id="transform-bar" style="display:none;">
+    <div class="t-group">
+      <span class="t-label">POS</span>
+      <span class="ax ax-x">X</span>
+      <input type="range" min="-6" max="6" step="0.05" id="pos-x" oninput="onTransform('pos',0,this.value)" style="width:52px;">
+      <span class="t-val" id="vpos-x">0.00</span>
+      <span class="ax ax-y">Y</span>
+      <input type="range" min="-6" max="6" step="0.05" id="pos-y" oninput="onTransform('pos',1,this.value)" style="width:52px;">
+      <span class="t-val" id="vpos-y">0.00</span>
+      <span class="ax ax-z">Z</span>
+      <input type="range" min="-6" max="6" step="0.05" id="pos-z" oninput="onTransform('pos',2,this.value)" style="width:52px;">
+      <span class="t-val" id="vpos-z">0.00</span>
+    </div>
+    <div class="t-group">
+      <span class="t-label">ROT</span>
+      <span class="ax ax-x">X</span>
+      <input type="range" min="0" max="360" step="5" id="rot-x" oninput="onTransform('rot',0,this.value)" style="width:52px;">
+      <span class="t-val" id="vrot-x">0°</span>
+      <span class="ax ax-y">Y</span>
+      <input type="range" min="0" max="360" step="5" id="rot-y" oninput="onTransform('rot',1,this.value)" style="width:52px;">
+      <span class="t-val" id="vrot-y">0°</span>
+      <span class="ax ax-z">Z</span>
+      <input type="range" min="0" max="360" step="5" id="rot-z" oninput="onTransform('rot',2,this.value)" style="width:52px;">
+      <span class="t-val" id="vrot-z">0°</span>
+    </div>
+    <div class="t-group">
+      <span class="t-label">SCALE</span>
+      <input type="range" min="0.1" max="4" step="0.05" id="scale-u" oninput="onTransform('scale',0,this.value)" style="width:52px;">
+      <span class="t-val" id="vscale-u">1.00×</span>
+    </div>
+    <div class="t-group">
+      <span class="t-label">STRETCH</span>
+      <span class="ax ax-x">X</span>
+      <input type="range" min="0.1" max="4" step="0.05" id="str-x" oninput="onTransform('str',0,this.value)" style="width:44px;">
+      <span class="ax ax-y">Y</span>
+      <input type="range" min="0.1" max="4" step="0.05" id="str-y" oninput="onTransform('str',1,this.value)" style="width:44px;">
+      <span class="ax ax-z">Z</span>
+      <input type="range" min="0.1" max="4" step="0.05" id="str-z" oninput="onTransform('str',2,this.value)" style="width:44px;">
+    </div>
+    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:9px;letter-spacing:1px;">
+      <input type="checkbox" id="mirror-check" onchange="onTransform('mirror',0,this.checked)"> MIRROR X
+    </label>
+    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:9px;letter-spacing:1px;">
+      <input type="checkbox" id="visible-check" onchange="onTransform('visible',0,this.checked)" checked> VISIBLE
+    </label>
+    <input class="input" id="part-name-input" style="width:110px;padding:3px 6px;" placeholder="Part name" oninput="onTransform('name',0,this.value)" />
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="footer-info" id="footer-info">0 parts · 0 polys · 0 sockets · 0 states</div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn" onclick="doClear()">✕ Clear All</button>
+      <button class="btn btn-primary" onclick="openModal()">📁 Export…</button>
+      <button class="btn btn-success" onclick="quickSave()">✓ Save Blueprint</button>
+    </div>
+  </div>
+</div>
+
+<!-- File Modal -->
+<div class="modal-overlay" id="file-modal" style="display:none;" onclick="closeModal(event)">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <span class="modal-title">📁 FILE OPERATIONS</span>
+      <button class="btn btn-sm" onclick="closeModal()">×</button>
+    </div>
+    <div style="margin-bottom:14px;">
+      <div class="panel-title">ASSET NAME</div>
+      <input class="input" id="mesh-name-input" value="my-asset" placeholder="my-asset" />
+    </div>
+    <div style="display:flex;gap:4px;margin-bottom:14px;">
+      <button class="btn" id="modal-tab-export" onclick="switchModalTab('export')" style="flex:1;text-transform:uppercase;letter-spacing:1px;">Export</button>
+      <button class="btn" id="modal-tab-import" onclick="switchModalTab('import')" style="flex:1;text-transform:uppercase;letter-spacing:1px;">Import</button>
+    </div>
+    <div id="modal-export-panel">
+      <div class="export-grid">
+        <div class="export-card" onclick="doExport('blueprint')">
+          <div class="export-icon">📋</div>
+          <div class="export-label">Blueprint</div>
+          <div class="export-desc">Full V5 JSON</div>
+        </div>
+        <div class="export-card" onclick="doExport('socket-config')">
+          <div class="export-icon">🔌</div>
+          <div class="export-label">Sockets</div>
+          <div class="export-desc">socket-config.json</div>
+        </div>
+        <div class="export-card" onclick="doExport('obj')">
+          <div class="export-icon">🎲</div>
+          <div class="export-label">OBJ</div>
+          <div class="export-desc">Wavefront mesh</div>
+        </div>
+        <div class="export-card" onclick="doExport('gltf')">
+          <div class="export-icon">🌐</div>
+          <div class="export-label">GLTF</div>
+          <div class="export-desc">Web-ready mesh</div>
+        </div>
+        <div class="export-card" onclick="doExport('bake')">
+          <div class="export-icon">📦</div>
+          <div class="export-label">BAKE</div>
+          <div class="export-desc">Full bundle .txt</div>
+        </div>
+      </div>
+    </div>
+    <div id="modal-import-panel" style="display:none;">
+      <div class="drop-zone" id="drop-zone"
+        onclick="document.getElementById('file-import-input').click()"
+        ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+        <div class="drop-icon">📂</div>
+        <div class="drop-text">Click or drag & drop</div>
+        <div class="drop-sub">Blueprint JSON · Socket-config JSON · V1 Ship JSON</div>
+      </div>
+      <input type="file" id="file-import-input" accept=".json" style="display:none;" onchange="handleFileSelect(event)" />
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ============================================================================
+// STATE
+// ============================================================================
+
+const PALETTE = [
+  '#FFFFFF','#CCCCCC','#888888','#444444',
+  '#4488FF','#2244AA','#88CCFF','#00FFFF',
+  '#FFCC00','#FF6600','#FF3366','#FF88AA',
+  '#44FF88','#22AA66','#1a1a2e','#2d2d44'
+];
+
+const SOCKET_TYPE_COLORS = {
+  weapon:'#ff4444', engine:'#ff8c00', thruster:'#00cfff',
+  shield:'#44aaff', fx:'#aa44ff', custom:'#aaaaaa'
+};
+
+const POLY_COUNTS = {
+  fuselage:12,wing:12,engine:24,cockpit:16,fin:12,weapon:16,
+  head:20,torso:18,arm:16,leg:16,booster:20,shoulder:14
+};
+
+const SHIP_COMPS = [
+  {type:'fuselage',icon:'◆',label:'Fuselage'},
+  {type:'wing',icon:'◢',label:'Wing'},
+  {type:'engine',icon:'●',label:'Engine'},
+  {type:'cockpit',icon:'◠',label:'Cockpit'},
+  {type:'fin',icon:'▲',label:'Fin'},
+  {type:'weapon',icon:'│',label:'Weapon'},
+];
+const MECHA_COMPS = [
+  {type:'head',icon:'◉',label:'Head'},
+  {type:'torso',icon:'▬',label:'Torso'},
+  {type:'arm',icon:'╱',label:'Arm'},
+  {type:'leg',icon:'║',label:'Leg'},
+  {type:'booster',icon:'⊕',label:'Booster'},
+  {type:'shoulder',icon:'◧',label:'Shoulder'},
+];
+const ALL_COMPS = [...SHIP_COMPS, ...MECHA_COMPS];
+
+let state = {
+  parts: [],
+  sockets: [],
+  animStates: [],
+  selectedPartId: null,
+  selectedSocketId: null,
+  selectedAnimId: null,
+  previewAnimId: null,
+  previewProgress: 0,
+  activeColor: '#4488FF',
+  activeTab: 'MESH',
+  partGroup: 'ship',
+  showSockets: true,
+  history: [],
+  historyIdx: -1,
+  isPlaying: false,
+  animRaf: null,
+};
+
+// ============================================================================
+// THREE.JS SCENE
+// ============================================================================
+
+let scene, camera, renderer, raycaster, mouse;
+let meshes = {}, socketMarkers = {};
+let spherical = {r:7, theta:Math.PI/4, phi:Math.PI/3};
+let isDragging = false, prevMouse = {x:0,y:0};
+
+function initScene() {
+  const mount = document.getElementById('canvas-mount');
+  const w = mount.clientWidth, h = mount.clientHeight;
+
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(50, w/h, 0.1, 1000);
+  raycaster = new THREE.Raycaster();
+  mouse = new THREE.Vector2();
+
+  renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+  renderer.setSize(w, h);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setClearColor(0x000000, 0);
+  mount.appendChild(renderer.domElement);
+
+  scene.add(new THREE.AmbientLight(0x304060, 0.8));
+  const sun = new THREE.DirectionalLight(0xffffff, 1.0); sun.position.set(6,10,6); scene.add(sun);
+  const fill = new THREE.DirectionalLight(0x4488ff, 0.4); fill.position.set(-5,-4,-5); scene.add(fill);
+  const rim = new THREE.DirectionalLight(0xaa44ff, 0.2); rim.position.set(0,-6,8); scene.add(rim);
+
+  const grid = new THREE.GridHelper(12, 24, 0x1a2a44, 0x0a1220);
+  grid.position.y = -1.5; scene.add(grid);
+
+  applyCamera();
+
+  mount.addEventListener('mousedown', e => { isDragging=true; prevMouse={x:e.clientX,y:e.clientY}; });
+  mount.addEventListener('mousemove', e => {
+    if (!isDragging) return;
+    spherical.theta -= (e.clientX-prevMouse.x)*0.008;
+    spherical.phi = Math.max(0.05, Math.min(Math.PI-0.05, spherical.phi+(e.clientY-prevMouse.y)*0.008));
+    applyCamera(); prevMouse={x:e.clientX,y:e.clientY};
+  });
+  mount.addEventListener('mouseup', () => isDragging=false);
+  mount.addEventListener('wheel', e => { spherical.r=Math.max(1.5,Math.min(18,spherical.r+e.deltaY*0.01)); applyCamera(); });
+  mount.addEventListener('contextmenu', e => e.preventDefault());
+  mount.addEventListener('click', handleSceneClick);
+
+  window.addEventListener('resize', () => {
+    const nw=mount.clientWidth, nh=mount.clientHeight;
+    camera.aspect=nw/nh; camera.updateProjectionMatrix(); renderer.setSize(nw,nh);
+  });
+
+  (function animate(){
+    requestAnimationFrame(animate);
+    renderer.render(scene, camera);
+  })();
+}
+
+function applyCamera() {
+  camera.position.set(
+    spherical.r*Math.sin(spherical.phi)*Math.cos(spherical.theta),
+    spherical.r*Math.cos(spherical.phi),
+    spherical.r*Math.sin(spherical.phi)*Math.sin(spherical.theta)
+  );
+  camera.lookAt(0,0,0);
+}
+
+function hexToRgb(hex) {
+  const r=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return r?{r:parseInt(r[1],16)/255,g:parseInt(r[2],16)/255,b:parseInt(r[3],16)/255}:{r:0.8,g:0.8,b:0.8};
+}
+
+function createGeometry(type) {
+  let g;
+  switch(type) {
+    case 'fuselage': g=new THREE.ConeGeometry(0.5,2,6); g.rotateX(Math.PI/2); break;
+    case 'wing':     g=new THREE.BoxGeometry(1.8,0.08,0.7); break;
+    case 'engine':   g=new THREE.CylinderGeometry(0.25,0.18,0.6,6); g.rotateX(Math.PI/2); break;
+    case 'cockpit':  g=new THREE.SphereGeometry(0.35,6,4,0,Math.PI*2,0,Math.PI/2); break;
+    case 'fin':      g=new THREE.BoxGeometry(0.08,0.6,0.4); break;
+    case 'weapon':   g=new THREE.CylinderGeometry(0.06,0.06,1,4); g.rotateX(Math.PI/2); break;
+    case 'head':     g=new THREE.BoxGeometry(0.6,0.7,0.55); break;
+    case 'torso':    g=new THREE.BoxGeometry(1.0,1.2,0.6); break;
+    case 'arm':      g=new THREE.CylinderGeometry(0.14,0.11,1.1,6); break;
+    case 'leg':      g=new THREE.CylinderGeometry(0.17,0.13,1.3,6); break;
+    case 'booster':  g=new THREE.CylinderGeometry(0.22,0.15,0.55,8); g.rotateX(Math.PI/2); break;
+    case 'shoulder': g=new THREE.SphereGeometry(0.28,6,5); break;
+    default:         g=new THREE.BoxGeometry(1,1,1);
+  }
+  const ni=g.toNonIndexed();
+  const cnt=ni.attributes.position.count;
+  const col=new Float32Array(cnt*3).fill(0.8);
+  ni.setAttribute('color',new THREE.BufferAttribute(col,3));
+  ni.computeVertexNormals();
+  return ni;
+}
+
+function syncMeshes(displayParts) {
+  // Remove stale meshes
+  Object.keys(meshes).forEach(id=>{
+    const baseId=id.replace('_mirror','');
+    const part=displayParts.find(p=>p.id===baseId);
+    if(!part||(id.endsWith('_mirror')&&!part.mirrored)){
+      scene.remove(meshes[id]);
+      meshes[id]?.geometry?.dispose();
+      meshes[id]?.material?.dispose();
+      delete meshes[id];
+    }
+  });
+
+  displayParts.forEach(part=>{
+    if(!part.visible){ if(meshes[part.id]) meshes[part.id].visible=false; return; }
+    let mesh=meshes[part.id];
+    if(!mesh){
+      const mat=new THREE.MeshLambertMaterial({vertexColors:true,flatShading:true,side:THREE.DoubleSide});
+      mesh=new THREE.Mesh(createGeometry(part.type),mat);
+      mesh.userData.partId=part.id;
+      scene.add(mesh); meshes[part.id]=mesh;
+    }
+    mesh.visible=true;
+    mesh.position.set(...part.position);
+    mesh.rotation.set(part.rotation[0]*Math.PI/180,part.rotation[1]*Math.PI/180,part.rotation[2]*Math.PI/180);
+    const sx=part.scaleXYZ||[1,1,1];
+    mesh.scale.set(part.scale*sx[0],part.scale*sx[1],part.scale*sx[2]);
+    if(part.vertexColors&&mesh.geometry.attributes.color){
+      const c=mesh.geometry.attributes.color;
+      for(let i=0;i<part.vertexColors.length;i++) c.array[i]=part.vertexColors[i];
+      c.needsUpdate=true;
+    }
+    mesh.material.emissive=new THREE.Color(part.id===state.selectedPartId?0x112244:0x000000);
+    mesh.material.emissiveIntensity=part.id===state.selectedPartId?1:0;
+
+    if(part.mirrored){
+      let mm=meshes[part.id+'_mirror'];
+      if(!mm){
+        const mat=new THREE.MeshLambertMaterial({vertexColors:true,flatShading:true,side:THREE.DoubleSide});
+        mm=new THREE.Mesh(createGeometry(part.type),mat);
+        mm.userData.isMirror=true; mm.userData.partId=part.id;
+        scene.add(mm); meshes[part.id+'_mirror']=mm;
+      }
+      if(part.vertexColors&&mm.geometry.attributes.color){
+        const c=mm.geometry.attributes.color;
+        for(let i=0;i<part.vertexColors.length;i++) c.array[i]=part.vertexColors[i];
+        c.needsUpdate=true;
+      }
+      mm.position.set(-part.position[0],part.position[1],part.position[2]);
+      mm.rotation.set(part.rotation[0]*Math.PI/180,-part.rotation[1]*Math.PI/180,part.rotation[2]*Math.PI/180);
+      mm.scale.copy(mesh.scale);
+      mm.material.emissive=mesh.material.emissive;
+      mm.material.emissiveIntensity=mesh.material.emissiveIntensity;
+    }
+  });
+}
+
+function syncSocketMarkers() {
+  Object.values(socketMarkers).forEach(m=>scene.remove(m));
+  socketMarkers={};
+  if(!state.showSockets) return;
+  state.sockets.forEach(s=>{
+    const color=SOCKET_TYPE_COLORS[s.type]||'#aaaaaa';
+    const geo=new THREE.SphereGeometry(0.07,8,8);
+    const mat=new THREE.MeshBasicMaterial({color,transparent:true,opacity:0.85});
+    const sph=new THREE.Mesh(geo,mat);
+    sph.position.set(s.position.x,s.position.y,s.position.z);
+    scene.add(sph); socketMarkers[s.id]=sph;
+
+    const lineGeo=new THREE.BufferGeometry();
+    lineGeo.setAttribute('position',new THREE.BufferAttribute(new Float32Array([-0.15,0,0,0.15,0,0,0,-0.15,0,0,0.15,0,0,0,-0.15,0,0,0.15]),3));
+    const lines=new THREE.LineSegments(lineGeo,new THREE.LineBasicMaterial({color,opacity:0.5,transparent:true}));
+    lines.position.copy(sph.position);
+    scene.add(lines); socketMarkers[s.id+'_lines']=lines;
+
+    if(s.mirror){
+      const mGeo=new THREE.SphereGeometry(0.07,8,8);
+      const mMat=new THREE.MeshBasicMaterial({color,transparent:true,opacity:0.3,wireframe:true});
+      const mSph=new THREE.Mesh(mGeo,mMat);
+      mSph.position.set(-s.position.x,s.position.y,s.position.z);
+      scene.add(mSph); socketMarkers[s.id+'_mirror']=mSph;
+    }
+  });
+}
+
+function handleSceneClick(e) {
+  if(isDragging) return;
+  const mount=document.getElementById('canvas-mount');
+  const rect=mount.getBoundingClientRect();
+  mouse.x=((e.clientX-rect.left)/rect.width)*2-1;
+  mouse.y=-((e.clientY-rect.top)/rect.height)*2+1;
+  raycaster.setFromCamera(mouse,camera);
+  const objs=Object.values(meshes).filter(m=>!m.userData.isMirror&&m.visible);
+  const hits=raycaster.intersectObjects(objs);
+  if(hits.length>0){
+    const {object,faceIndex}=hits[0];
+    const pid=object.userData.partId;
+    if(pid!==state.selectedPartId){
+      selectPart(pid);
+    } else if(state.activeColor&&faceIndex!==undefined){
+      const colors=object.geometry.attributes.color;
+      const rgb=hexToRgb(state.activeColor);
+      const sv=faceIndex*3;
+      for(let i=0;i<3;i++) colors.setXYZ(sv+i,rgb.r,rgb.g,rgb.b);
+      colors.needsUpdate=true;
+      const part=state.parts.find(p=>p.id===pid);
+      if(part){
+        part.vertexColors=Array.from(colors.array);
+        render();
+      }
+    }
+  } else {
+    selectPart(null);
+  }
+}
+
+// ============================================================================
+// GENERATE ID
+// ============================================================================
+function genId(){ return Math.random().toString(36).substr(2,7); }
+
+// ============================================================================
+// PARTS
+// ============================================================================
+
+function addPart(type){
+  if(state.parts.length>=32) return;
+  const comp=ALL_COMPS.find(c=>c.type===type);
+  const part={
+    id:genId(), type, name:`${comp?.label||type} ${state.parts.filter(p=>p.type===type).length+1}`,
+    position:[0,0,0], rotation:[0,0,0], scale:1, scaleXYZ:[1,1,1],
+    mirrored:false, visible:true, vertexColors:null
+  };
+  state.parts.push(part);
+  pushHistory({type:'add',part:JSON.parse(JSON.stringify(part))});
+  switchTab('MESH');
+  selectPart(part.id);
+  render();
+}
+
+function deletePart(id){
+  const idx=state.parts.findIndex(p=>p.id===id);
+  if(idx<0) return;
+  pushHistory({type:'delete',part:JSON.parse(JSON.stringify(state.parts[idx]))});
+  state.parts.splice(idx,1);
+  scene.remove(meshes[id]); meshes[id]?.geometry?.dispose(); meshes[id]?.material?.dispose(); delete meshes[id];
+  scene.remove(meshes[id+'_mirror']); meshes[id+'_mirror']?.geometry?.dispose(); meshes[id+'_mirror']?.material?.dispose(); delete meshes[id+'_mirror'];
+  if(state.selectedPartId===id) state.selectedPartId=null;
+  render();
+}
+
+function selectPart(id){
+  state.selectedPartId=id;
+  render();
+}
+
+function pushHistory(action){
+  state.history=state.history.slice(0,state.historyIdx+1);
+  state.history.push(action);
+  state.historyIdx++;
+}
+
+function doUndo(){
+  if(state.historyIdx<0) return;
+  const action=state.history[state.historyIdx];
+  if(action.type==='add'){
+    const idx=state.parts.findIndex(p=>p.id===action.part.id);
+    if(idx>=0){ state.parts.splice(idx,1); }
+    scene.remove(meshes[action.part.id]); delete meshes[action.part.id];
+    if(state.selectedPartId===action.part.id) state.selectedPartId=null;
+  } else if(action.type==='delete'){
+    state.parts.push(JSON.parse(JSON.stringify(action.part)));
+  }
+  state.historyIdx--;
+  render();
+}
+
+function doClear(){
+  if(!confirm('Clear all parts?')) return;
+  state.parts=[]; state.selectedPartId=null; state.history=[]; state.historyIdx=-1;
+  Object.values(meshes).forEach(m=>{m.geometry?.dispose();m.material?.dispose();scene.remove(m);});
+  meshes={};
+  render();
+}
+
+function onTransform(prop,axis,value){
+  const part=state.parts.find(p=>p.id===state.selectedPartId);
+  if(!part) return;
+  if(prop==='pos'){ part.position[axis]=parseFloat(value); document.getElementById(`vpos-${'xyz'[axis]}`).textContent=parseFloat(value).toFixed(2); }
+  else if(prop==='rot'){ part.rotation[axis]=parseFloat(value); document.getElementById(`vrot-${'xyz'[axis]}`).textContent=parseFloat(value)+'°'; }
+  else if(prop==='scale'){ part.scale=parseFloat(value); document.getElementById('vscale-u').textContent=parseFloat(value).toFixed(2)+'×'; }
+  else if(prop==='str'){ const s=[...(part.scaleXYZ||[1,1,1])]; s[axis]=parseFloat(value); part.scaleXYZ=s; }
+  else if(prop==='mirror'){ part.mirrored=value; }
+  else if(prop==='visible'){ part.visible=value; }
+  else if(prop==='name'){ part.name=value; }
+  syncMeshes(state.parts);
+  updatePartsList();
+  updateStats();
+}
+
+// ============================================================================
+// SOCKETS
+// ============================================================================
+
+function openAddSocket(){ document.getElementById('add-socket-form').style.display='block'; document.getElementById('socket-name-input').focus(); }
+function closeAddSocket(){ document.getElementById('add-socket-form').style.display='none'; }
+
+function confirmAddSocket(){
+  const name=document.getElementById('socket-name-input').value.trim();
+  const type=document.getElementById('socket-type-select').value;
+  if(!name) return;
+  const s={id:genId(),name,type,position:{x:0,y:0,z:0},mirror:false};
+  state.sockets.push(s);
+  document.getElementById('socket-name-input').value='';
+  closeAddSocket();
+  selectSocket(s.id);
+  syncSocketMarkers();
+  render();
+}
+
+function deleteSocket(id){
+  state.sockets=state.sockets.filter(s=>s.id!==id);
+  if(state.selectedSocketId===id){ state.selectedSocketId=null; }
+  syncSocketMarkers();
+  render();
+}
+
+function selectSocket(id){
+  state.selectedSocketId=id;
+  renderSocketList();
+  updateSocketInspector();
+}
+
+function updateSocketInspector(){
+  const s=state.sockets.find(sk=>sk.id===state.selectedSocketId);
+  const insp=document.getElementById('socket-inspector');
+  if(!s){ insp.style.display='none'; return; }
+  insp.style.display='block';
+  document.getElementById('si-name').value=s.name;
+  document.getElementById('si-type').value=s.type;
+  document.getElementById('si-mirror').checked=s.mirror;
+
+  const pc=document.getElementById('si-pos-controls');
+  pc.innerHTML='';
+  ['x','y','z'].forEach((ax,i)=>{
+    const colors=['#ff3366','#44ff88','#4488ff'];
+    pc.innerHTML+=`
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+        <span style="color:${colors[i]};font-size:9px;width:10px;">${ax.toUpperCase()}</span>
+        <input type="range" min="-5" max="5" step="0.05" value="${s.position[ax]}"
+          style="flex:1;" oninput="onSocketPos('${s.id}','${ax}',this.value)">
+        <span style="font-size:8px;color:var(--muted);width:36px;">${s.position[ax].toFixed(2)}</span>
+      </div>`;
+  });
+
+  document.getElementById('si-name').oninput=e=>{ s.name=e.target.value; renderSocketList(); syncSocketMarkers(); };
+  document.getElementById('si-type').onchange=e=>{ s.type=e.target.value; renderSocketList(); syncSocketMarkers(); };
+  document.getElementById('si-mirror').onchange=e=>{ s.mirror=e.target.checked; syncSocketMarkers(); };
+}
+
+function onSocketPos(id,ax,val){
+  const s=state.sockets.find(sk=>sk.id===id);
+  if(s){ s.position[ax]=parseFloat(val); syncSocketMarkers(); updateSocketInspector(); updateStats(); }
+}
+
+// ============================================================================
+// ANIMATION STATES
+// ============================================================================
+
+function captureTransforms(){
+  const transforms={};
+  state.parts.forEach(p=>{
+    transforms[p.id]={
+      position:[...p.position], rotation:[...p.rotation],
+      scale:p.scale, scaleXYZ:[...(p.scaleXYZ||[1,1,1])]
+    };
+  });
+  return transforms;
+}
+
+function openAddAnim(){ document.getElementById('add-anim-form').style.display='block'; document.getElementById('anim-name-input').focus(); }
+function closeAddAnim(){ document.getElementById('add-anim-form').style.display='none'; }
+
+function confirmAddAnim(){
+  if(state.animStates.length>=8) return;
+  const name=document.getElementById('anim-name-input').value.trim();
+  const desc=document.getElementById('anim-desc-input').value.trim();
+  if(!name) return;
+  const s={id:genId(),name,description:desc,transforms:captureTransforms()};
+  state.animStates.push(s);
+  document.getElementById('anim-name-input').value='';
+  document.getElementById('anim-desc-input').value='';
+  closeAddAnim();
+  state.selectedAnimId=s.id;
+  render();
+}
+
+function deleteAnimState(id){
+  state.animStates=state.animStates.filter(s=>s.id!==id);
+  if(state.selectedAnimId===id) state.selectedAnimId=null;
+  if(state.previewAnimId===id){ state.previewAnimId=null; state.previewProgress=0; }
+  render();
+}
+
+function recaptureSelectedAnim(){
+  const s=state.animStates.find(a=>a.id===state.selectedAnimId);
+  if(s){ s.transforms=captureTransforms(); updateAnimInspector(); }
+}
+
+function exportSelectedAnim(){
+  const s=state.animStates.find(a=>a.id===state.selectedAnimId);
+  if(!s) return;
+  const name=getMeshName();
+  const data={version:'1.0',mesh:name,stateName:s.name,exportedAt:new Date().toISOString(),transforms:s.transforms};
+  downloadFile(JSON.stringify(data,null,2),`${name}-anim-${s.name.replace(/\s+/g,'_')}.json`,'application/json');
+}
+
+function toggleAnimPreview(id){
+  if(state.previewAnimId===id){
+    state.previewAnimId=null; state.previewProgress=0; state.isPlaying=false;
+    if(state.animRaf){cancelAnimationFrame(state.animRaf);state.animRaf=null;}
+  } else {
+    state.previewAnimId=id; state.previewProgress=0;
+  }
+  render();
+}
+
+function playAnimTo(id){
+  if(state.animRaf){cancelAnimationFrame(state.animRaf);state.animRaf=null;}
+  state.previewAnimId=id; state.isPlaying=true;
+  let start=null; const dur=1200;
+  const tick=ts=>{
+    if(!start) start=ts;
+    const t=Math.min((ts-start)/dur,1);
+    state.previewProgress=t;
+    updateAnimDisplay();
+    if(t<1){ state.animRaf=requestAnimationFrame(tick); }
+    else { state.isPlaying=false; state.animRaf=null; }
+  };
+  state.animRaf=requestAnimationFrame(tick);
+}
+
+function getDisplayParts(){
+  if(!state.previewAnimId||state.previewProgress===0) return state.parts;
+  const anim=state.animStates.find(s=>s.id===state.previewAnimId);
+  if(!anim) return state.parts;
+  const t=state.previewProgress;
+  return state.parts.map(p=>{
+    const tr=anim.transforms[p.id];
+    if(!tr) return p;
+    const lerp=(a,b,t)=>a+(b-a)*t;
+    const lerpArr=(a,b,t)=>a.map((v,i)=>lerp(v,b&&b[i]!==undefined?b[i]:v,t));
+    return {...p,
+      position:lerpArr(p.position,tr.position,t),
+      rotation:lerpArr(p.rotation,tr.rotation,t),
+      scale:lerp(p.scale,tr.scale,t),
+      scaleXYZ:lerpArr(p.scaleXYZ||[1,1,1],tr.scaleXYZ||[1,1,1],t)
+    };
+  });
+}
+
+function updateAnimDisplay(){
+  const ind=document.getElementById('anim-indicator');
+  const pct=document.getElementById('anim-pct');
+  if(state.previewAnimId){
+    ind.style.display='block';
+    pct.textContent=Math.round(state.previewProgress*100);
+  } else {
+    ind.style.display='none';
+  }
+  syncMeshes(getDisplayParts());
+  renderAnimList();
+}
+
+function updateAnimInspector(){
+  const s=state.animStates.find(a=>a.id===state.selectedAnimId);
+  const insp=document.getElementById('anim-inspector');
+  if(!s){ insp.style.display='none'; return; }
+  insp.style.display='block';
+  document.getElementById('ai-title').textContent='STATE: '+s.name;
+  document.getElementById('ai-info').textContent=`Captures transforms of ${Object.keys(s.transforms).length} parts`;
+}
+
+// ============================================================================
+// EXPORT
+// ============================================================================
+
+function getMeshName(){ return document.getElementById('mesh-name-input')?.value.trim()||'my-asset'; }
+
+function downloadFile(content,filename,mimeType){
+  const blob=new Blob([content],{type:mimeType});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+function doExport(fmt){
+  const name=getMeshName();
+  switch(fmt){
+    case 'blueprint': exportBlueprint(name); break;
+    case 'socket-config': exportSocketConfig(name); break;
+    case 'obj': exportOBJ(name); break;
+    case 'gltf': exportGLTF(name); break;
+    case 'bake': exportBake(name); break;
+  }
+  closeModal();
+}
+
+function exportBlueprint(name){
+  const data={
+    version:'2.0',type:'lowpoly-v5-blueprint',mesh:name,exportedAt:new Date().toISOString(),
+    components:state.parts.map(({id,...r})=>r),
+    sockets:state.sockets.map(({id,...r})=>r),
+    animationStates:state.animStates.map(s=>({name:s.name,description:s.description,transforms:s.transforms}))
+  };
+  downloadFile(JSON.stringify(data,null,2),`${name}-blueprint.json`,'application/json');
+}
+
+function exportSocketConfig(name){
+  const data={
+    version:'1.0',mesh:name,exportedAt:new Date().toISOString(),
+    sockets:state.sockets.map(({id,...s})=>({
+      id:genId(),name:s.name,type:s.type,position:s.position,
+      mirror:s.mirror,mirroredPosition:s.mirror?{x:-s.position.x,y:s.position.y,z:s.position.z}:null
+    }))
+  };
+  downloadFile(JSON.stringify(data,null,2),`${name}-socket-config.json`,'application/json');
+}
+
+function buildGLTFData(){
+  const gltf={
+    asset:{version:"2.0",generator:"LowPolyShipDesignerV5"},
+    scene:0,scenes:[{nodes:[]}],nodes:[],meshes:[],accessors:[],bufferViews:[],buffers:[]
+  };
+  const bufs=[]; let byteOffset=0,nodeIdx=0,meshIdx=0,accIdx=0,bvIdx=0;
+
+  state.parts.forEach(part=>{
+    const mesh=meshes[part.id]; if(!mesh) return;
+    const toProcess=[{m:mesh,n:part.name}];
+    if(part.mirrored&&meshes[part.id+'_mirror']) toProcess.push({m:meshes[part.id+'_mirror'],n:part.name+'_Mirror'});
+
+    toProcess.forEach(({m,n})=>{
+      m.updateMatrixWorld();
+      const pos=m.geometry.attributes.position,col=m.geometry.attributes.color,nor=m.geometry.attributes.normal;
+      const tPos=new Float32Array(pos.count*3),tNor=new Float32Array(nor.count*3);
+      let mnX=Infinity,mnY=Infinity,mnZ=Infinity,mxX=-Infinity,mxY=-Infinity,mxZ=-Infinity;
+      for(let i=0;i<pos.count;i++){
+        const v=new THREE.Vector3(pos.getX(i),pos.getY(i),pos.getZ(i)).applyMatrix4(m.matrixWorld);
+        tPos[i*3]=v.x;tPos[i*3+1]=v.y;tPos[i*3+2]=v.z;
+        mnX=Math.min(mnX,v.x);mnY=Math.min(mnY,v.y);mnZ=Math.min(mnZ,v.z);
+        mxX=Math.max(mxX,v.x);mxY=Math.max(mxY,v.y);mxZ=Math.max(mxZ,v.z);
+        const nv=new THREE.Vector3(nor.getX(i),nor.getY(i),nor.getZ(i)).transformDirection(m.matrixWorld);
+        tNor[i*3]=nv.x;tNor[i*3+1]=nv.y;tNor[i*3+2]=nv.z;
+      }
+      const addBuf=(arr,type,min,max)=>{
+        const bytes=new Uint8Array(arr.buffer.slice(0));
+        bufs.push(bytes);
+        gltf.bufferViews.push({buffer:0,byteOffset,byteLength:bytes.length,target:34962});
+        const acc={bufferView:bvIdx++,componentType:5126,count:arr.length/3,type};
+        if(min) acc.min=min; if(max) acc.max=max;
+        gltf.accessors.push(acc); byteOffset+=bytes.length; return accIdx++;
+      };
+      const pa=addBuf(tPos,'VEC3',[mnX,mnY,mnZ],[mxX,mxY,mxZ]);
+      const na=addBuf(tNor,'VEC3');
+      const ca=addBuf(col.array,'VEC3');
+      gltf.meshes.push({name:n,primitives:[{attributes:{POSITION:pa,NORMAL:na,COLOR_0:ca},mode:4}]});
+      gltf.nodes.push({name:n,mesh:meshIdx++});
+      gltf.scenes[0].nodes.push(nodeIdx++);
+    });
+  });
+
+  const total=bufs.reduce((s,b)=>s+b.length,0);
+  const combined=new Uint8Array(total); let off=0;
+  bufs.forEach(b=>{combined.set(b,off);off+=b.length;});
+  gltf.buffers.push({uri:'data:application/octet-stream;base64,'+btoa(String.fromCharCode.apply(null,combined)),byteLength:total});
+  return gltf;
+}
+
+function exportOBJ(name){
+  let out=`# LowPolyShipDesignerV5\n# ${new Date().toISOString()}\n\n`;
+  let off=1;
+  state.parts.forEach(part=>{
+    const mesh=meshes[part.id]; if(!mesh) return;
+    const toProcess=[{m:mesh,n:part.name}];
+    if(part.mirrored&&meshes[part.id+'_mirror']) toProcess.push({m:meshes[part.id+'_mirror'],n:part.name+'_Mirror'});
+    toProcess.forEach(({m,n})=>{
+      out+=`o ${n.replace(/\s+/g,'_')}\n`;
+      const pos=m.geometry.attributes.position,col=m.geometry.attributes.color,nor=m.geometry.attributes.normal;
+      m.updateMatrixWorld();
+      for(let i=0;i<pos.count;i++){
+        const v=new THREE.Vector3(pos.getX(i),pos.getY(i),pos.getZ(i)).applyMatrix4(m.matrixWorld);
+        out+=`v ${v.x.toFixed(5)} ${v.y.toFixed(5)} ${v.z.toFixed(5)} ${col.getX(i).toFixed(4)} ${col.getY(i).toFixed(4)} ${col.getZ(i).toFixed(4)}\n`;
+      }
+      for(let i=0;i<nor.count;i++){
+        const nv=new THREE.Vector3(nor.getX(i),nor.getY(i),nor.getZ(i)).transformDirection(m.matrixWorld);
+        out+=`vn ${nv.x.toFixed(5)} ${nv.y.toFixed(5)} ${nv.z.toFixed(5)}\n`;
+      }
+      for(let i=0;i<pos.count;i+=3) out+=`f ${off+i}//${off+i} ${off+i+1}//${off+i+1} ${off+i+2}//${off+i+2}\n`;
+      off+=pos.count; out+='\n';
+    });
+  });
+  downloadFile(out,`${name}.obj`,'text/plain');
+}
+
+function exportGLTF(name){
+  downloadFile(JSON.stringify(buildGLTFData(),null,2),`${name}.gltf`,'model/gltf+json');
+}
+
+function exportBake(name){
+  const bp={version:'2.0',type:'lowpoly-v5-blueprint',mesh:name,exportedAt:new Date().toISOString(),
+    components:state.parts.map(({id,...r})=>r),
+    sockets:state.sockets.map(({id,...r})=>r),
+    animationStates:state.animStates.map(s=>({name:s.name,description:s.description,transforms:s.transforms}))
+  };
+  const sc={version:'1.0',mesh:name,exportedAt:new Date().toISOString(),
+    sockets:state.sockets.map(({id,...s})=>({id:genId(),...s,mirroredPosition:s.mirror?{x:-s.position.x,y:s.position.y,z:s.position.z}:null}))
+  };
+  const gltf=buildGLTFData();
+  const animStatesData=state.animStates.map(s=>JSON.stringify({version:'1.0',mesh:name,stateName:s.name,transforms:s.transforms},null,2)).join('\n\n---\n\n');
+  const readme=`# ${name} — Baked Asset Bundle\nGenerated: ${new Date().toISOString()}\nParts: ${state.parts.length}  Polygons: ${state.parts.reduce((a,p)=>(a+(POLY_COUNTS[p.type]||12)*(p.mirrored?2:1)),0)}  Sockets: ${state.sockets.length}  AnimStates: ${state.animStates.length}\n\nFiles:\n- ${name}-blueprint.json : Full V5 blueprint\n- ${name}-socket-config.json : Socket configuration\n- ${name}.gltf : GLTF mesh\n- ${name}-anim-states.json : Animation transforms\n\nImport blueprint + socket-config into game engine. Use GLTF for mesh. Interpolate anim JSON targets in runtime.`;
+  const bundle=`=== BAKED BUNDLE: ${name} ===\n\n=== ${name}-blueprint.json ===\n${JSON.stringify(bp,null,2)}\n\n=== ${name}-socket-config.json ===\n${JSON.stringify(sc,null,2)}\n\n=== ${name}.gltf ===\n${JSON.stringify(gltf,null,2)}\n\n=== ${name}-anim-states.json ===\n${animStatesData}\n\n=== README ===\n${readme}`;
+  downloadFile(bundle,`${name}-baked-bundle.txt`,'text/plain');
+}
+
+function quickSave(){ exportBlueprint(getMeshName()); }
+
+function handleImport(jsonString){
+  const data=JSON.parse(jsonString);
+  let parts=[],sockets=[],animStates=[];
+
+  if(data.type==='lowpoly-v5-blueprint'){
+    parts=(data.components||[]).map(c=>({id:genId(),type:c.type||'fuselage',name:c.name||'Part',position:c.position||[0,0,0],rotation:c.rotation||[0,0,0],scale:c.scale??1,scaleXYZ:c.scaleXYZ||[1,1,1],mirrored:c.mirrored||false,visible:c.visible!==false,vertexColors:c.vertexColors||null}));
+    sockets=(data.sockets||[]).map(s=>({id:genId(),name:s.name||'socket',type:s.type||'custom',position:s.position||{x:0,y:0,z:0},mirror:s.mirror||false}));
+    animStates=(data.animationStates||[]).map(a=>({id:genId(),name:a.name,description:a.description||'',transforms:a.transforms||{}}));
+  } else if(data.type==='lowpoly-ship'){
+    parts=(data.components||[]).map(c=>({id:genId(),type:c.type||'fuselage',name:c.name||'Part',position:c.position||[0,0,0],rotation:c.rotation||[0,0,0],scale:c.scale??1,scaleXYZ:c.scaleXYZ||[1,1,1],mirrored:c.mirrored||false,visible:c.visible!==false,vertexColors:c.vertexColors||null}));
+  } else if(data.sockets&&data.mesh){
+    sockets=(data.sockets||[]).map(s=>({id:genId(),name:s.name||'socket',type:s.type||'custom',position:s.position||{x:0,y:0,z:0},mirror:s.mirror||false}));
+  } else { throw new Error('Unsupported format'); }
+
+  // Clear existing
+  Object.values(meshes).forEach(m=>{m.geometry?.dispose();m.material?.dispose();scene.remove(m);}); meshes={};
+  state.parts=parts; state.sockets=sockets; state.animStates=animStates;
+  state.selectedPartId=null; state.selectedSocketId=null; state.selectedAnimId=null;
+  state.previewAnimId=null; state.previewProgress=0;
+  state.history=[]; state.historyIdx=-1;
+  render();
+}
+
+// ============================================================================
+// MODAL
+// ============================================================================
+
+let modalTab='export';
+function openModal(){ document.getElementById('file-modal').style.display='flex'; }
+function closeModal(e){ if(!e||e.target===document.getElementById('file-modal')) document.getElementById('file-modal').style.display='none'; }
+
+function switchModalTab(t){
+  modalTab=t;
+  document.getElementById('modal-export-panel').style.display=t==='export'?'block':'none';
+  document.getElementById('modal-import-panel').style.display=t==='import'?'block':'none';
+  document.getElementById('modal-tab-export').className='btn'+(t==='export'?' btn-primary':'');
+  document.getElementById('modal-tab-import').className='btn'+(t==='import'?' btn-primary':'');
+}
+
+function handleDragOver(e){ e.preventDefault(); document.getElementById('drop-zone').classList.add('drag'); }
+function handleDragLeave(){ document.getElementById('drop-zone').classList.remove('drag'); }
+function handleDrop(e){ e.preventDefault(); handleDragLeave(); processFile(e.dataTransfer.files?.[0]); }
+function handleFileSelect(e){ processFile(e.target.files?.[0]); }
+
+function processFile(file){
+  if(!file||!file.name.endsWith('.json')){ alert('Please select a .json file'); return; }
+  const r=new FileReader();
+  r.onload=ev=>{ try{ handleImport(ev.target.result); closeModal(); }catch(e){ alert('Import failed: '+e.message); } };
+  r.readAsText(file);
+}
+
+// ============================================================================
+// UI RENDER
+// ============================================================================
+
+function switchTab(tab){
+  state.activeTab=tab;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.toggle('active',c.id==='tab-'+tab));
+}
+
+function setGroup(g){
+  state.partGroup=g;
+  document.getElementById('grp-ship').classList.toggle('active',g==='ship');
+  document.getElementById('grp-mecha').classList.toggle('active',g==='mecha');
+  document.getElementById('comp-title').textContent=(g==='ship'?'Ship':'Mecha')+' Parts';
+  renderCompButtons();
+}
+
+function renderCompButtons(){
+  const comps=state.partGroup==='ship'?SHIP_COMPS:MECHA_COMPS;
+  const el=document.getElementById('comp-buttons');
+  el.innerHTML=comps.map(c=>`
+    <button class="comp-btn" onclick="addPart('${c.type}')" ${state.parts.length>=32?'disabled':''}>
+      <span class="comp-icon">${c.icon}</span>
+      <span class="comp-label">${c.label}</span>
+    </button>`).join('');
+}
+
+function renderQuickSockets(){
+  const types=['weapon','engine','thruster','shield'];
+  const icons={weapon:'⚡',engine:'🔥',thruster:'💨',shield:'🛡'};
+  const colors=SOCKET_TYPE_COLORS;
+  document.getElementById('quick-sockets').innerHTML=types.map(t=>`
+    <button class="qs-btn" style="border-left:2px solid ${colors[t]};"
+      onclick="state.sockets.push({id:genId(),name:'${t}',type:'${t}',position:{x:0,y:0,z:0},mirror:false});syncSocketMarkers();switchTab('SOCKETS');render();">
+      ${icons[t]} ${t.charAt(0).toUpperCase()+t.slice(1)}
+    </button>`).join('');
+}
+
+function renderPalette(){
+  const grid=document.getElementById('palette-grid');
+  grid.innerHTML=PALETTE.map(c=>`
+    <div class="swatch${state.activeColor===c?' active':''}" style="background:${c};"
+      onclick="state.activeColor='${c}';renderPalette();"
+    ></div>`).join('');
+}
+
+function updatePartsList(){
+  const list=document.getElementById('parts-list');
+  const np=document.getElementById('no-parts');
+  np.style.display=state.parts.length===0?'block':'none';
+
+  // Remove old items
+  list.querySelectorAll('.part-item').forEach(el=>el.remove());
+
+  state.parts.forEach(p=>{
+    const comp=ALL_COMPS.find(c=>c.type===p.type);
+    const div=document.createElement('div');
+    div.className='part-item'+(p.id===state.selectedPartId?' selected':'');
+    div.innerHTML=`<span>${comp?.icon||'◆'} ${p.name}</span><button class="del-btn" onclick="event.stopPropagation();deletePart('${p.id}')">×</button>`;
+    div.onclick=()=>selectPart(p.id);
+    list.appendChild(div);
+  });
+}
+
+function renderSocketList(){
+  const list=document.getElementById('socket-list');
+  const ns=document.getElementById('no-sockets');
+  document.getElementById('socket-count').textContent=state.sockets.length;
+  ns.style.display=state.sockets.length===0?'block':'none';
+  list.querySelectorAll('.socket-item').forEach(el=>el.remove());
+  state.sockets.forEach(s=>{
+    const color=SOCKET_TYPE_COLORS[s.type]||'#aaaaaa';
+    const typeIcons={weapon:'⚡',engine:'🔥',thruster:'💨',shield:'🛡',fx:'✨',custom:'📌'};
+    const div=document.createElement('div');
+    div.className='socket-item';
+    div.style.borderColor=s.id===state.selectedSocketId?`${color}55`:'transparent';
+    div.style.background=s.id===state.selectedSocketId?`${color}18`:'';
+    div.innerHTML=`<span style="color:${color}">${typeIcons[s.type]||'📌'} ${s.name}</span>
+      <button class="del-btn" onclick="event.stopPropagation();deleteSocket('${s.id}')">×</button>`;
+    div.onclick=()=>selectSocket(s.id);
+    list.appendChild(div);
+  });
+}
+
+function renderAnimList(){
+  const list=document.getElementById('anim-list');
+  const na=document.getElementById('no-anims');
+  document.getElementById('anim-count').textContent=state.animStates.length;
+  na.style.display=state.animStates.length===0?'block':'none';
+  list.querySelectorAll('.anim-state').forEach(el=>el.remove());
+
+  state.animStates.forEach(s=>{
+    const isPrev=state.previewAnimId===s.id;
+    const div=document.createElement('div');
+    div.className='anim-state'+(isPrev?' preview':'');
+    div.innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <span style="color:${isPrev?'#cc88ff':'#a8c8ff'};font-weight:bold;">${s.name}</span>
+          ${s.description?`<div style="font-size:9px;color:var(--muted);margin-top:1px;">${s.description}</div>`:''}
+        </div>
+        <div style="display:flex;gap:3px;">
+          <button class="btn btn-xs btn-accent" title="Preview" onclick="event.stopPropagation();toggleAnimPreview('${s.id}')">${isPrev?'■':'▶'}</button>
+          <button class="btn btn-xs" style="color:#88aaff;" title="Play" onclick="event.stopPropagation();playAnimTo('${s.id}')">▷</button>
+          <button class="btn btn-xs btn-danger" onclick="event.stopPropagation();deleteAnimState('${s.id}')">×</button>
+        </div>
+      </div>
+      ${isPrev?`
+      <div style="margin-top:6px;" onclick="event.stopPropagation()">
+        <input type="range" min="0" max="1" step="0.01" value="${state.previewProgress}" style="width:100%;"
+          oninput="state.previewProgress=parseFloat(this.value);state.isPlaying=false;updateAnimDisplay();">
+        <div style="font-size:9px;color:var(--purple);text-align:right;">${Math.round(state.previewProgress*100)}% ${state.isPlaying?'● PLAYING':''}</div>
+      </div>`:''}`;
+    div.onclick=()=>{ state.selectedAnimId=s.id; updateAnimInspector(); renderAnimList(); };
+    list.appendChild(div);
+  });
+  updateAnimInspector();
+}
+
+function updateTransformBar(){
+  const part=state.parts.find(p=>p.id===state.selectedPartId);
+  const bar=document.getElementById('transform-bar');
+  if(!part){ bar.style.display='none'; return; }
+  bar.style.display='flex';
+
+  // Position
+  ['x','y','z'].forEach((ax,i)=>{
+    const el=document.getElementById(`pos-${ax}`);
+    if(el){ el.value=part.position[i]; document.getElementById(`vpos-${ax}`).textContent=part.position[i].toFixed(2); }
+  });
+  // Rotation
+  ['x','y','z'].forEach((ax,i)=>{
+    const el=document.getElementById(`rot-${ax}`);
+    if(el){ el.value=part.rotation[i]; document.getElementById(`vrot-${ax}`).textContent=part.rotation[i]+'°'; }
+  });
+  // Scale
+  document.getElementById('scale-u').value=part.scale;
+  document.getElementById('vscale-u').textContent=part.scale.toFixed(2)+'×';
+  // Stretch
+  const sx=part.scaleXYZ||[1,1,1];
+  ['x','y','z'].forEach((ax,i)=>{ const el=document.getElementById(`str-${ax}`); if(el) el.value=sx[i]; });
+  // Mirror/visible/name
+  document.getElementById('mirror-check').checked=part.mirrored;
+  document.getElementById('visible-check').checked=part.visible!==false;
+  document.getElementById('part-name-input').value=part.name;
+}
+
+function updateStats(){
+  const polys=state.parts.reduce((a,p)=>(a+(POLY_COUNTS[p.type]||12)*(p.mirrored?2:1)),0);
+  document.getElementById('stat-parts').textContent=state.parts.length;
+  document.getElementById('stat-poly').textContent=polys;
+  document.getElementById('stat-sockets').textContent=state.sockets.length;
+  document.getElementById('stat-states').textContent=state.animStates.length;
+  document.getElementById('footer-info').textContent=`${state.parts.length} parts · ${polys} polys · ${state.sockets.length} sockets · ${state.animStates.length} states`;
+  document.getElementById('undo-btn').style.opacity=state.historyIdx>=0?'1':'0.4';
+  document.getElementById('empty-hint').style.display=state.parts.length===0?'flex':'none';
+}
+
+function toggleSocketVis(){
+  state.showSockets=!state.showSockets;
+  const btn=document.getElementById('sockets-toggle');
+  btn.style.border=state.showSockets?'1px solid #4488ff':'';
+  btn.style.color=state.showSockets?'#88ccff':'';
+  syncSocketMarkers();
+}
+
+function render(){
+  syncMeshes(getDisplayParts());
+  syncSocketMarkers();
+  updatePartsList();
+  renderSocketList();
+  renderAnimList();
+  updateTransformBar();
+  updateStats();
+  renderCompButtons();
+  updateAnimDisplay();
+}
+
+// ============================================================================
+// BOOT SEQUENCE
+// ============================================================================
+
+const bootMessages = [
+  'Initializing Three.js renderer…',
+  'Loading geometry factory…',
+  'Building socket system…',
+  'Preparing animation engine…',
+  'Calibrating viewport…',
+  'Ready.',
+];
+
+function boot(){
+  let i=0;
+  const status=document.getElementById('boot-status');
+  const interval=setInterval(()=>{
+    status.textContent=bootMessages[i]||'';
+    i++;
+    if(i>=bootMessages.length){ clearInterval(interval); }
+  },220);
+
+  setTimeout(()=>{
+    initScene();
+    renderPalette();
+    renderCompButtons();
+    renderQuickSockets();
+    render();
+
+    const bootEl=document.getElementById('boot');
+    const appEl=document.getElementById('app');
+    bootEl.classList.add('fade');
+    appEl.classList.add('visible');
+    setTimeout(()=>bootEl.style.display='none', 700);
+  }, 1500);
+}
+
+window.addEventListener('load', boot);
+</script>
+</body>
+</html>
